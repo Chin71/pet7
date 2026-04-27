@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>機甲戰兔：寵物救援行動 (柴油龐克版)</title>
+
+<style>
+body {
+  margin: 0;
+  overflow: hidden;
+  background: #121212;
+  font-family: "Microsoft JhengHei", "Impact", sans-serif;
+  color: #e0d0b8; /* 偏黃的羊皮紙色 */
+  touch-action: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+#game {
+  display: block;
+  width: 100vw;
+  height: 100vh;
+  background: #1a1a1a;
+}
+
+/* 柴油龐克 / 生鏽金屬風格面板 */
+.panel {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 12vh;
+  width: 90%;
+  max-width: 550px;
+  background: linear-gradient(135deg, #2a221e, #1a1512);
+  border: 4px solid #8b5a2b; /* 銅/鐵鏽色 */
+  border-radius: 6px;
+  padding: 25px;
+  text-align: center;
+  z-index: 10;
+  box-shadow: 0 15px 30px rgba(0,0,0,0.8), inset 0 0 15px rgba(0,0,0,0.9);
+  /* 增加面板的金屬鉚釘視覺裝飾 */
+  background-image: 
+    radial-gradient(circle at 10px 10px, #5c3a21 4px, transparent 5px),
+    radial-gradient(circle at calc(100% - 10px) 10px, #5c3a21 4px, transparent 5px),
+    radial-gradient(circle at 10px calc(100% - 10px), #5c3a21 4px, transparent 5px),
+    radial-gradient(circle at calc(100% - 10px) calc(100% - 10px), #5c3a21 4px, transparent 5px);
+  animation: heavy-drop 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+@keyframes heavy-drop {
+  0% { opacity: 0; transform: translate(-50%, -30px) scale(1.05); }
+  70% { transform: translate(-50%, 5px) scale(0.98); }
+  100% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+}
+
+h2 { margin-top: 0; color: #ff9d00; text-shadow: 2px 2px 4px #000; letter-spacing: 2px; }
+
+/* 鋼鐵機械風按鈕 */
+button {
+  border: 2px solid #5c3a21;
+  border-radius: 4px;
+  padding: 14px 20px;
+  margin: 8px;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+  background: linear-gradient(to bottom, #4a3320, #2c1e14);
+  color: #ffb84d;
+  text-shadow: 1px 1px 2px #000;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.5), inset 0 2px 2px rgba(255,255,255,0.1);
+  transition: all 0.1s;
+}
+
+button:active {
+  transform: translateY(4px);
+  box-shadow: 0 0px 2px rgba(0,0,0,0.5), inset 0 4px 6px rgba(0,0,0,0.6);
+  background: #2c1e14;
+}
+
+.option {
+  display: block;
+  width: 95%;
+  margin: 12px auto;
+  background: rgba(0, 0, 0, 0.4);
+  color: #e0d0b8;
+  font-size: 16px;
+  text-align: left;
+  border-left: 8px solid #8b5a2b;
+}
+
+.option:active { border-left: 8px solid #ff9d00; color: #ff9d00; }
+
+.hidden { display: none !important; }
+
+/* 底部操作區 */
+#controls {
+  position: fixed;
+  bottom: 25px;
+  left: 0;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 8;
+}
+
+.jump-btn {
+  width: 220px;
+  height: 65px;
+  border-radius: 8px;
+  font-size: 24px;
+  font-weight: 900;
+  background: linear-gradient(to bottom, #5c3a21, #382211);
+  border: 3px solid #ff9d00;
+  color: #ff9d00;
+  pointer-events: auto;
+  box-shadow: 0 6px 0 #2c1e14, 0 10px 15px rgba(0,0,0,0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-shadow: 2px 2px 0 #000;
+  cursor: pointer;
+  letter-spacing: 3px;
+}
+
+.jump-btn:active {
+  transform: translateY(6px);
+  box-shadow: 0 0px 0 #2c1e14, 0 4px 5px rgba(0,0,0,0.7);
+}
+
+#topTitle {
+  position: fixed;
+  top: 15px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 22px;
+  font-weight: 900;
+  background: rgba(20, 15, 10, 0.85);
+  color: #ff9d00;
+  padding: 8px 24px;
+  border-radius: 4px;
+  border: 2px solid #8b5a2b;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.6);
+  z-index: 7;
+  letter-spacing: 2px;
+  text-shadow: 2px 2px 4px #000;
+}
+
+#audioToggle {
+  position: fixed;
+  top: 15px;
+  right: 15px;
+  font-size: 22px;
+  background: rgba(20, 15, 10, 0.85);
+  padding: 8px 12px;
+  border-radius: 5px;
+  cursor: pointer;
+  z-index: 100;
+  border: 2px solid #8b5a2b;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.6);
+}
+
+/* 霧霾煙霧效果 (蒸汽龐克感) */
+.smoke-overlay {
+  position: fixed;
+  top: 0; left: 0; width: 100vw; height: 100vh;
+  background: radial-gradient(circle, rgba(0,0,0,0) 30%, rgba(20,15,10,0.6) 100%);
+  pointer-events: none;
+  z-index: 9;
+}
+</style>
+</head>
+
+<body>
+<div class="smoke-overlay"></div>
+<div id="topTitle">F.I.S.T: 寵物救援計畫</div>
+<div id="audioToggle" onclick="AudioSys.toggle()">🔊</div>
+
+<canvas id="game"></canvas>
+
+<div id="startPanel" class="panel">
+  <h2>反抗軍裝備選擇</h2>
+  <p style="color: #b0a08d; line-height: 1.6; margin-bottom: 20px;">
+    機械軍團抓走了你的寵物！<br>
+    裝備你的重型機械武裝，準備突圍。<br>
+    回答健康知識以啟動<span style="color:#ff9d00; font-weight:bold;">超載動力重擊</span>！<br>
+    (半空中的機油罐❤️可修復裝甲)
+  </p>
+  <button onclick="startGame('鐵拳','🐰', '🥊')">🐰 鐵拳戰兔</button>
+  <button onclick="startGame('電鞭','🐱', '⚡')">🐱 電鞭特務貓</button>
+  <button onclick="startGame('鑽頭','🐶', '🌪️')">🐶 鑽頭突擊犬</button>
+  <button onclick="startGame('重砲','🐻', '💥')">🐻 重砲爆破熊</button>
+</div>
+
+<div id="questionPanel" class="panel hidden">
+  <h2 id="questionText" style="font-size: 18px; line-height: 1.5; color: #ffb84d; text-shadow: 1px 1px 2px #000;"></h2>
+  <div id="options"></div>
+</div>
+
+<div id="messagePanel" class="panel hidden">
+  <h2 id="messageTitle" style="font-size: 26px;"></h2>
+  <p id="messageText" style="font-size: 16px; line-height: 1.6; color: #e0d0b8;"></p>
+  <button id="continueBtn" onclick="continueGame()" style="width: 80%; margin-top: 15px;">繼續推進</button>
+</div>
+
+<div id="controls">
+  <div class="jump-btn" id="btnJump">JUMP / 跳躍</div>
+</div>
+
+<script>
+// ==========================================
+// 1. Web Audio API 重工業風音效合成器
+// ==========================================
+const AudioSys = {
+  ctx: null, bgmTimer: null, step: 0, muted: false,
+  init() {
+    if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (this.ctx.state === 'suspended') this.ctx.resume();
+  },
+  toggle() {
+    this.muted = !this.muted;
+    document.getElementById("audioToggle").innerText = this.muted ? "🔇" : "🔊";
+  },
+  play(type) {
+    if (!this.ctx || this.muted) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.connect(gain); gain.connect(this.ctx.destination);
+
+    if (type === 'jump') {
+      // 氣閥噴射跳躍音效
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(150, now);
+      osc.frequency.exponentialRampToValueAtTime(40, now + 0.2);
+      gain.gain.setValueAtTime(0.15, now);
+      gain.gain.linearRampToValueAtTime(0, now + 0.2);
+      osc.start(now); osc.stop(now + 0.2);
+    } else if (type === 'charge') {
+      // 機械手臂蓄力音效
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(50, now);
+      osc.frequency.linearRampToValueAtTime(400, now + 0.3);
+      gain.gain.setValueAtTime(0.05, now);
+      gain.gain.linearRampToValueAtTime(0.2, now + 0.3);
+      osc.start(now); osc.stop(now + 0.3);
+    } else if (type === 'hit') {
+      // 巨大的重金屬爆炸敲擊聲
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(80, now);
+      osc.frequency.exponentialRampToValueAtTime(20, now + 0.4);
+      gain.gain.setValueAtTime(0.4, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+      
+      // 加入白噪音模擬爆炸碎屑
+      const noise = this.ctx.createBufferSource();
+      const buffer = this.ctx.createBuffer(1, this.ctx.sampleRate * 0.2, this.ctx.sampleRate);
+      const output = buffer.getChannelData(0);
+      for (let i = 0; i < buffer.length; i++) output[i] = Math.random() * 2 - 1;
+      noise.buffer = buffer;
+      const noiseGain = this.ctx.createGain();
+      noiseGain.gain.setValueAtTime(0.3, now);
+      noiseGain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+      noise.connect(noiseGain); noiseGain.connect(this.ctx.destination);
+      noise.start(now);
+
+      osc.start(now); osc.stop(now + 0.4);
+    } else if (type === 'hurt') {
+      // 金屬刮擦受傷音效
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(300, now);
+      osc.frequency.linearRampToValueAtTime(50, now + 0.5);
+      gain.gain.setValueAtTime(0.4, now);
+      gain.gain.linearRampToValueAtTime(0, now + 0.5);
+      osc.start(now); osc.stop(now + 0.5);
+    } else if (type === 'heal') {
+      // 裝甲修復音效 (齒輪咬合感)
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(300, now);
+      osc.frequency.setValueAtTime(600, now + 0.1);
+      gain.gain.setValueAtTime(0.15, now);
+      gain.gain.linearRampToValueAtTime(0, now + 0.3);
+      osc.start(now); osc.stop(now + 0.3);
+    }
+  },
+  startBGM() {
+    if (this.bgmTimer) clearInterval(this.bgmTimer);
+    // 沉重的工業風貝斯節奏
+    const notes = [ 65.4, 65.4, 73.4, 65.4, 98.0, 82.4, 65.4, 55.0 ];
+    this.bgmTimer = setInterval(() => {
+      if (!this.ctx || this.muted || gameState === 'start' || gameState === 'msg') return;
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sawtooth';
+      
+      osc.frequency.value = notes[this.step % notes.length]; 
+      
+      osc.connect(gain); gain.connect(this.ctx.destination);
+      let vol = gameState === 'combat' ? 0.03 : 0.08;
+      gain.gain.setValueAtTime(vol, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+      
+      osc.start(now); osc.stop(now + 0.3);
+      this.step++;
+    }, 250); // 稍微緩慢且沉重的步伐節奏
+  }
+};
+
+// ==========================================
+// 2. 遊戲系統與變數
+// ==========================================
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+resizeCanvas();
+window.addEventListener("resize", resizeCanvas);
+
+let gameState = 'start'; 
+let level = 0, questionIndex = 0, combo = 0;
+
+// 特效變數
+let particles = [], floatTexts = [];
+let screenShakeTimer = 0, screenShakeMag = 0;
+let flashAlpha = 0, flashColor = "white";
+let steamParticles = []; // 背景蒸汽特效
+
+let heart = { active: false, x: 0, y: 0, baseY: 0, frame: 0 };
+const groundY = () => canvas.height - 150;
+
+// 玩家新增 weapon 符號
+let player = { name: "", emoji: "", weapon: "", x: -100, y: 0, vy: 0, hp: 3, onGround: true, runFrame: 0, drawX: 0, isCharging: false };
+let monster = { name: "", emoji: "", x: 0, y: 0, hp: 1, maxHp: 1, scale: 1, filter: "none", offset: 0 };
+
+const stages = [
+  { name: "廢棄工廠區", monster: "蒸汽齒輪兵", emoji: "🤖", hp: 1, bg1: "#2a1c14", bg2: "#140e0a", ground: "#2b2b2b",
+    questions: [{ q: "睡前喝咖啡或濃茶有助於提高睡眠品質。", options: ["⭕ 是", "❌ 否"], answer: "❌ 否", exp: "咖啡因會刺激神經系統，影響入睡速度。" }] },
+  { name: "地下汙水站", monster: "毒沼潛伏者", emoji: "🐸", hp: 1, bg1: "#0a1a14", bg2: "#05100a", ground: "#1c2b22",
+    questions: [{ q: "睡前在床上滑手機的藍光，不會影響大腦分泌褪黑激素。", options: ["⭕ 是", "❌ 否"], answer: "❌ 否", exp: "螢幕藍光會抑制褪黑激素分泌，欺騙大腦現在是白天。" }] },
+  { name: "高架鐵路橋", monster: "武裝截擊機", emoji: "🚁", hp: 1, bg1: "#141c2a", bg2: "#0a0e14", ground: "#333b4d",
+    questions: [{ q: "規律的作息時間可以幫助維持良好的生理時鐘。", options: ["⭕ 是", "❌ 否"], answer: "⭕ 是", exp: "每天固定時間就寢和起床是穩定睡眠的關鍵。" }] },
+  { name: "核心熔爐", monster: "熔岩重裝將甲", emoji: "👹", hp: 2, bg1: "#3a0e05", bg2: "#1a0500", ground: "#3d140a",
+    questions: [
+      { q: "下列哪一種環境最適合幫助入睡？", options: ["吵雜明亮", "安靜、黑暗、涼爽", "悶熱潮濕", "開著電視"], answer: "安靜、黑暗、涼爽", exp: "涼爽避光且安靜的環境能進入深層睡眠。" },
+      { q: "躺在床上超過20分鐘還睡不著，最好的作法？", options: ["強迫自己睡", "起床做放鬆活動", "滑手機", "喝濃茶"], answer: "起床做放鬆活動", exp: "強迫入睡會增加焦慮，有睡意再回床上。" }
+    ] },
+  { name: "機械軍團總部", monster: "終極防衛機甲", emoji: "🦾", hp: 3, bg1: "#1c1c1c", bg2: "#000000", ground: "#111111",
+    questions: [
+      { q: "睡前做什麼活動有助於放鬆身心？", options: ["劇烈運動", "恐怖電影", "聽輕音樂或冥想", "吃豐盛宵夜"], answer: "聽輕音樂或冥想", exp: "靜心活動能幫助神經系統切換至休息模式。" },
+      { q: "關於午睡，下列觀念何者正確？", options: ["越久越好", "控制在20到30分鐘內", "傍晚繼續睡", "可取代晚間睡眠"], answer: "控制在20到30分鐘內", exp: "超過30分鐘的午睡容易感到昏沉，剝奪夜間睡眠驅力。" },
+      { q: "哪種飲食習慣最可能破壞夜間睡眠？", options: ["晚餐過飽且油膩", "下午後避咖啡因", "睡前喝溫牛奶", "晚餐七分飽"], answer: "晚餐過飽且油膩", exp: "過飽會延長消化時間，導致胃酸逆流干擾睡眠。" }
+    ] }
+];
+
+function startGame(name, emoji, weapon) {
+  AudioSys.init(); AudioSys.startBGM();
+  player.name = name; player.emoji = emoji; player.weapon = weapon;
+  document.getElementById("startPanel").classList.add("hidden");
+  loadStage(); gameState = 'running';
+}
+
+function loadStage() {
+  const s = stages[level];
+  player.x = -100; player.drawX = -100; player.y = groundY(); player.vy = 0; player.isCharging = false;
+  questionIndex = 0; particles = []; floatTexts = []; steamParticles = [];
+  monster.name = s.monster; monster.emoji = s.emoji;
+  monster.x = canvas.width - 160; monster.y = groundY();
+  monster.hp = s.hp; monster.maxHp = s.hp; monster.scale = 1; monster.filter = "none"; monster.offset = 0;
+  
+  // 機油罐 (補血)
+  heart.active = true; heart.x = canvas.width / 2; heart.baseY = groundY() - 140; heart.y = heart.baseY;
+}
+
+// ==========================================
+// 3. 特效與視覺回饋 (工業/火焰/黑煙)
+// ==========================================
+function triggerShake(frames, mag) { screenShakeTimer = frames; screenShakeMag = mag; }
+function triggerFlash(color, alpha = 0.5) { flashColor = color; flashAlpha = alpha; }
+
+function createExplosion(x, y, colors, sizeMult = 1, isSmoke = false) {
+  for (let i = 0; i < 40 * sizeMult; i++) {
+    particles.push({
+      x: x, y: y,
+      vx: (Math.random() - 0.5) * 35 * sizeMult, 
+      vy: (Math.random() - 0.5) * 35 * sizeMult - (isSmoke ? 10 : 5),
+      life: 1, 
+      color: colors[Math.floor(Math.random() * colors.length)],
+      size: (Math.random() * 8 + 4) * sizeMult, 
+      isSmoke: isSmoke
+    });
+  }
+}
+function addFloatText(x, y, text, color) { floatTexts.push({ x, y, text, color, life: 1 }); }
+
+// ==========================================
+// 4. 戰鬥系統 (重拳打擊感)
+// ==========================================
+function askQuestion() {
+  gameState = 'combat'; 
+  const q = stages[level].questions[questionIndex];
+  document.getElementById("questionPanel").classList.remove("hidden");
+  document.getElementById("questionText").textContent = q.q;
+  const options = document.getElementById("options");
+  options.innerHTML = "";
+  q.options.forEach(opt => {
+    const btn = document.createElement("button"); btn.className = "option"; btn.textContent = opt;
+    btn.onclick = () => answer(opt); options.appendChild(btn);
+  });
+}
+
+function answer(selected) {
+  document.getElementById("questionPanel").classList.add("hidden");
+  const q = stages[level].questions[questionIndex];
+  if (selected === q.answer) {
+    combo++;
+    executeHeavyImpact(true, q.exp); 
+  } else {
+    combo = 0;
+    executeHeavyImpact(false, "系統修正解答：「" + q.answer + "」。\n" + q.exp); 
+  }
+}
+
+// 火箭鐵拳重擊動畫！
+function executeHeavyImpact(isSuccess, text) {
+  gameState = 'animating';
+  let step = 0;
+  let startX = player.x;
+  
+  if (isSuccess) {
+    AudioSys.play('charge'); // 齒輪蓄力聲
+    player.isCharging = true;
+  }
+
+  function animLoop() {
+    step += 0.05; // 稍微放慢增加重量感
+    
+    if (step < 0.4) {
+      // 蓄力階段：角色後拉，微微震動
+      if (isSuccess) {
+        player.drawX = startX - 15 + (Math.random() * 4 - 2); 
+        // 噴出微微的蒸氣
+        if(Math.random() > 0.5) createExplosion(player.drawX, player.y, ["#888", "#555"], 0.2, true);
+      } else {
+        monster.offset = -10 + (Math.random() * 6 - 3); // 怪物蓄力
+      }
+      requestAnimationFrame(animLoop);
+    } 
+    else if (step >= 0.4 && step < 0.5) {
+      // 突進轟擊瞬間
+      player.isCharging = false;
+      if (isSuccess) {
+        player.drawX = monster.x - 70; // 衝到怪物面前
+      } else {
+        monster.offset = -(monster.x - player.x - 70); // 怪物衝過來
+      }
+      requestAnimationFrame(animLoop);
+    } 
+    else if (step >= 0.5 && step < 0.6) {
+      // 命中！超級停頓與火花噴發
+      if (step === 0.5 || step < 0.52) {
+        if (isSuccess) {
+          AudioSys.play('hit');
+          triggerShake(20, 25); // 極大震動
+          triggerFlash("#ff9d00", 0.4); // 橘黃閃光
+          // 橘紅色火花與黑煙
+          createExplosion(monster.x + 20, monster.y - 30, ["#ff5500", "#ffaa00", "#ffffff"], 1.5, false);
+          createExplosion(monster.x + 20, monster.y - 30, ["#333", "#111", "#555"], 2.0, true);
+          monster.filter = "brightness(2) contrast(1.5)"; 
+        } else {
+          AudioSys.play('hit');
+          triggerShake(25, 30);
+          triggerFlash("#ff0000", 0.5);
+          createExplosion(player.drawX + 40, player.y - 30, ["#ff0000", "#550000", "#222"], 1.5, false);
+          player.hp--;
+          addFloatText(player.drawX, player.y - 80, "ARMOR DAMAGED", "#ff0000");
+        }
+      }
+      requestAnimationFrame(animLoop);
+    }
+    else if (step >= 0.6 && step < 1.2) {
+      // 擊退效果
+      if (isSuccess) {
+         monster.offset += 5; // 怪物被擊退滑行
+         monster.filter = "none";
+         if (step > 0.6 && step < 0.65) {
+             monster.hp--;
+             addFloatText(monster.x, monster.y - 100, combo > 1 ? "OVERDRIVE!" : "IMPACT!", "#ff9d00");
+             step = 0.65;
+         }
+      }
+      requestAnimationFrame(animLoop);
+    }
+    else {
+      // 收招，重置狀態
+      monster.filter = "none";
+      monster.offset = 0;
+      player.x = startX; 
+      player.drawX = player.x;
+      
+      gameState = 'msg';
+      showMessage(isSuccess ? `COMBO x${combo} 裝甲擊穿！` : "警告：遭受致命打擊", text);
+    }
+  }
+  requestAnimationFrame(animLoop);
+}
+
+function showMessage(title, text) {
+  document.getElementById("messagePanel").classList.remove("hidden");
+  document.getElementById("messageTitle").textContent = title;
+  document.getElementById("messageTitle").style.color = title.includes("警告") ? "#ff0000" : "#ff9d00";
+  document.getElementById("messageText").innerText = text;
+}
+
+function continueGame() {
+  document.getElementById("messagePanel").classList.add("hidden");
+  if (player.hp <= 0) { endGame(false); return; }
+  if (monster.hp <= 0) {
+    level++;
+    if (level >= stages.length) { endGame(true); return; }
+    loadStage(); gameState = 'running'; return;
+  }
+  questionIndex++; gameState = 'running'; 
+}
+
+function endGame(win) {
+  gameState = 'msg';
+  document.getElementById("messagePanel").classList.remove("hidden");
+  if (win) {
+    AudioSys.play('heal'); // 借用正面音效
+    document.getElementById("messageTitle").textContent = "OPERATION COMPLETE";
+    document.getElementById("messageTitle").style.color = "#ff9d00";
+    document.getElementById("messageText").textContent = "你運用健康知識粉碎了機械軍團，成功奪回心愛的寵物！\n裝甲完好，任務圓滿達成。";
+  } else {
+    AudioSys.play('hurt');
+    document.getElementById("messageTitle").textContent = "SYSTEM FAILURE";
+    document.getElementById("messageTitle").style.color = "#ff0000";
+    document.getElementById("messageText").textContent = "裝甲毀損... 機體停止運作。\n請重新載入睡眠知識，再次挑戰。";
+  }
+  document.getElementById("continueBtn").textContent = "重新啟動系統";
+  document.getElementById("continueBtn").onclick = () => location.reload();
+}
+
+// ==========================================
+// 5. 遊戲主迴圈
+// ==========================================
+function jump() {
+  if (gameState === 'running' && player.onGround) {
+    AudioSys.play('jump');
+    // 跳躍時腳底噴出蒸汽
+    createExplosion(player.x + 30, player.y + 60, ["#ccc", "#888"], 0.5, true);
+    player.vy = -18; player.onGround = false;
+  }
+}
+
+function update() {
+  if (gameState === 'start' || gameState === 'msg') return;
+
+  const distance = Math.abs(player.x - monster.x);
+
+  if (gameState === 'running') {
+    // 沉重的步伐：每跑一段距離微微震動螢幕
+    if (player.onGround && Math.floor(player.runFrame * 10) % 15 === 0) {
+       triggerShake(2, 2);
+    }
+
+    if (distance > 140) {
+      player.x += 5.5; // 速度比原本稍微慢一點，呈現厚重感
+      player.drawX = player.x;
+      player.runFrame += 0.25;
+    } else {
+      gameState = 'combat'; 
+      setTimeout(askQuestion, 200); 
+    }
+
+    // 沉重的重力
+    player.vy += 1.2; 
+    player.y += player.vy;
+    if (player.y >= groundY()) { 
+      if (!player.onGround) {
+        // 落地產生震動與煙塵
+        triggerShake(5, 5);
+        createExplosion(player.x + 30, player.y + 60, ["#555", "#333"], 0.4, true);
+      }
+      player.y = groundY(); player.vy = 0; player.onGround = true; 
+    }
+  }
+
+  // 機油罐 (愛心) 邏輯
+  if (heart.active) {
+    heart.frame += 0.1; heart.y = heart.baseY + Math.sin(heart.frame) * 8; 
+    let dist = Math.sqrt(Math.pow(player.x - heart.x, 2) + Math.pow(player.y - heart.y, 2));
+    if (dist < 75) { 
+      heart.active = false; AudioSys.play('heal'); 
+      createExplosion(heart.x, heart.y, ["#00ff00", "#fff"], 0.8, false);
+      addFloatText(player.x, player.y - 30, "ARMOR +1", "#00ff00");
+      if (player.hp < 3) player.hp++;
+    }
+  }
+  
+  // 更新粒子 (火花會受重力，煙霧會往上飄)
+  particles.forEach(p => { 
+    if(p.isSmoke) {
+      p.vy -= 0.2; p.size += 0.5; p.life -= 0.02; // 煙霧擴散消散
+    } else {
+      p.vy += 0.8; p.life -= 0.03; // 火花受重力掉落
+    }
+    p.x += p.vx; p.y += p.vy; 
+  });
+  particles = particles.filter(p => p.life > 0);
+  
+  floatTexts.forEach(ft => { ft.y -= 1.5; ft.life -= 0.02; });
+  floatTexts = floatTexts.filter(ft => ft.life > 0);
+  
+  // 背景隨機產生蒸汽
+  if(Math.random() < 0.1) {
+    steamParticles.push({x: Math.random() * canvas.width, y: groundY() + 60, vy: -Math.random()*2 - 1, life: 1, size: Math.random()*20 + 10});
+  }
+  steamParticles.forEach(p => { p.y += p.vy; p.life -= 0.005; p.size += 0.2; });
+  steamParticles = steamParticles.filter(p => p.life > 0);
+}
+
+function draw() {
+  const s = stages[level] || stages[stages.length - 1];
+  
+  // 工業風漸層背景
+  ctx.fillStyle = s.bg1; ctx.fillRect(0, 0, canvas.width, canvas.height);
+  const grad = ctx.createLinearGradient(0,0, 0, canvas.height);
+  grad.addColorStop(0, "rgba(0,0,0,0)"); grad.addColorStop(1, s.bg2);
+  ctx.fillStyle = grad; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // 遠景齒輪/水管輪廓裝飾
+  ctx.strokeStyle = "rgba(0, 0, 0, 0.4)"; ctx.lineWidth = 15;
+  ctx.beginPath(); ctx.arc(canvas.width*0.8, 100, 80, 0, Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(canvas.width*0.8, 100, 60, 0, Math.PI*2); ctx.stroke();
+  ctx.fillStyle = "rgba(0, 0, 0, 0.3)"; ctx.fillRect(canvas.width*0.2, 0, 40, canvas.height);
+
+  // 背景蒸汽
+  steamParticles.forEach(p => {
+    ctx.globalAlpha = p.life * 0.3;
+    ctx.fillStyle = "#888";
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill();
+  });
+  ctx.globalAlpha = 1.0;
+
+  // 鋼鐵地面
+  ctx.fillStyle = s.ground; ctx.fillRect(0, groundY() + 60, canvas.width, canvas.height);
+  ctx.fillStyle = "#111"; ctx.fillRect(0, groundY() + 60, canvas.width, 15);
+  // 地面鉚釘
+  ctx.fillStyle = "#444";
+  for(let i=10; i<canvas.width; i+=40) { ctx.beginPath(); ctx.arc(i, groundY() + 68, 3, 0, Math.PI*2); ctx.fill(); }
+
+  // 繪製機油罐 (愛心)
+  if (heart.active) {
+    ctx.font = "40px Arial"; ctx.shadowColor = "#00ff00"; ctx.shadowBlur = 15;
+    ctx.fillText("🔋", heart.x, heart.y); ctx.shadowBlur = 0; 
+  }
+
+  // 繪製玩家
+  let bounce = (gameState === 'running' && player.onGround) ? Math.sin(player.runFrame) * 6 : 0;
+  
+  // 畫出巨大的機械武器
+  ctx.save();
+  ctx.translate(player.drawX + 60, player.y + 20 + bounce);
+  if(player.isCharging) {
+    ctx.rotate(Math.random() * 0.2 - 0.1); // 蓄力時武器震動
+  }
+  ctx.font = "60px Arial";
+  ctx.fillText(player.weapon, 0, 0);
+  ctx.restore();
+
+  // 畫出角色
+  ctx.font = "75px Arial";
+  ctx.fillText(player.emoji, player.drawX, player.y + 10 + bounce);
+  ctx.font = "bold 18px Microsoft JhengHei"; ctx.fillStyle = "#ffb84d";
+  ctx.fillText(player.name, player.drawX - 5, player.y + 100);
+
+  // 繪製怪物 (機械軍團)
+  let mx = monster.x + monster.offset;
+  let my = monster.y;
+
+  ctx.save();
+  ctx.translate(mx + 40, my + 40);
+  ctx.scale(monster.scale, monster.scale);
+  ctx.filter = monster.filter;
+  ctx.font = monster.maxHp >= 3 ? "105px Arial" : "85px Arial";
+  ctx.fillText(monster.emoji, -40, 30);
+  ctx.restore();
+
+  // 寵物籠子 (最後一關)
+  if(level === stages.length - 1) {
+    ctx.font = "50px Arial"; ctx.fillText("🐶", canvas.width - 100, groundY() - 5);
+    ctx.fillStyle = "#444"; ctx.fillRect(canvas.width - 110, groundY() + 45, 70, 10); // 金屬底座
+    ctx.strokeStyle = "#888"; ctx.lineWidth = 4; ctx.strokeRect(canvas.width - 105, groundY() - 10, 60, 60); // 鐵籠
+  }
+
+  // 粒子特效渲染
+  particles.forEach(p => {
+    ctx.globalAlpha = p.life; 
+    ctx.fillStyle = p.color;
+    if(!p.isSmoke) { ctx.shadowColor = p.color; ctx.shadowBlur = 8; }
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill();
+    ctx.shadowBlur = 0;
+  });
+  ctx.globalAlpha = 1.0;
+
+  floatTexts.forEach(ft => {
+    ctx.globalAlpha = ft.life;
+    ctx.font = "bold 32px Impact"; ctx.fillStyle = ft.color;
+    ctx.shadowColor = "#000"; ctx.shadowBlur = 6;
+    ctx.fillText(ft.text, ft.x, ft.y);
+    ctx.shadowBlur = 0;
+  });
+  ctx.globalAlpha = 1.0;
+
+  // UI 介面 (金屬裝甲框)
+  ctx.fillStyle = "#2c1e14"; ctx.strokeStyle = "#8b5a2b"; ctx.lineWidth = 3;
+  ctx.fillRect(15, 60, 200, 45); ctx.strokeRect(15, 60, 200, 45);
+  ctx.font = "22px Arial"; ctx.fillStyle = "#ffb84d";
+  ctx.fillText("ARMOR: " + "🛡️".repeat(player.hp) + "💀".repeat(3 - player.hp), 25, 90);
+
+  ctx.fillRect(canvas.width - 250, 60, 230, 65); ctx.strokeRect(canvas.width - 250, 60, 230, 65);
+  ctx.font = "18px Microsoft JhengHei";
+  ctx.textAlign = "right"; ctx.fillText("TARGET: " + monster.name, canvas.width - 30, 85); ctx.textAlign = "left";
+  
+  ctx.fillStyle = "#111"; ctx.fillRect(canvas.width - 240, 100, 210, 12);
+  let hpRatio = Math.max(0, monster.hp / monster.maxHp);
+  ctx.fillStyle = "#ff5500"; ctx.fillRect(canvas.width - 240, 100, 210 * hpRatio, 12); // 紅熱金屬色血條
+
+  ctx.fillStyle = "#e0d0b8"; ctx.fillText(`AREA 0${level + 1} // ${stages[level].name}`, 20, 135);
+}
+
+function loop() {
+  update();
+  
+  ctx.save();
+  if (screenShakeTimer > 0) {
+    ctx.translate((Math.random() - 0.5) * screenShakeMag, (Math.random() - 0.5) * screenShakeMag);
+    screenShakeTimer--;
+  }
+
+  draw();
+  ctx.restore();
+
+  if (flashAlpha > 0) {
+    ctx.fillStyle = flashColor; ctx.globalAlpha = flashAlpha;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.globalAlpha = 1.0; flashAlpha -= 0.05;
+  }
+
+  requestAnimationFrame(loop);
+}
+
+// 控制綁定
+window.addEventListener("touchstart", (e) => { if (e.target.tagName !== 'BUTTON' && gameState === 'running') jump(); }, {passive: false});
+window.addEventListener("mousedown", (e) => { if (e.target.tagName !== 'BUTTON' && gameState === 'running') jump(); });
+document.getElementById("btnJump").addEventListener("click", (e) => { e.stopPropagation(); jump(); });
+document.addEventListener("keydown", (e) => { if (e.key === " " && gameState === 'running') { e.preventDefault(); jump(); }});
+
+loop();
+</script>
+</body>
+</html>
